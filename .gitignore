@@ -1,2 +1,6 @@
 backend/node_modules
 backend/yarn.lock
+
+web/node_modules
+web/yarn.lock
+
