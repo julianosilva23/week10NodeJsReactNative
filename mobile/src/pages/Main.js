@@ -5,11 +5,22 @@ import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons'; /// apertar tab nas chaves para ver todas as bibliotecas
 import api from '../services/api';
+import { connect, disconnect } from '../services/socket';
+import { Socket } from 'engine.io-client';
 
 function Main({ navigation }) {
     const [currentRegion, setCurrentRegion] = useState(null);
     const [devs, setDevs] = useState([]);
     const [techs, setTechs] = useState('');
+
+    function setupWebSocket() {
+        const { latitude, longitude } = currentRegion;
+        connect(
+            latitude,
+            longitude,
+            techs
+        );        
+    }
 
     useEffect(() => {
         
@@ -51,6 +62,7 @@ function Main({ navigation }) {
         });
 
         setDevs(response.data.devs);
+        setupWebSocket();
 
         console.log(response)
     }
