@@ -4,9 +4,12 @@ import { View, Image, Text, TextInput, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons'; /// apertar tab nas chaves para ver todas as bibliotecas
+import api from '../services/api';
 
 function Main({ navigation }) {
     const [currentRegion, setCurrentRegion] = useState(null);
+    const [devs, setDevs] = useState([]);
+    const [techs, setTechs] = useState('');
 
     useEffect(() => {
         
@@ -34,7 +37,28 @@ function Main({ navigation }) {
         }
 
         loadInitialPosition();
-    }, [])
+    }, []);
+
+    async function loadDevs() {
+        const { latitude, longitude } = currentRegion;
+
+        const response = await api.get('/search', {
+            params: {
+                latitude,
+                longitude,
+                techs
+            }
+        });
+
+        setDevs(response.data.devs);
+
+        console.log(response)
+    }
+
+    function handleRegionChanged(region) {
+        console.log(region)
+        setCurrentRegion(region)
+    }
 
     if(!currentRegion) {
         return null;
@@ -42,30 +66,44 @@ function Main({ navigation }) {
 
     return (
         <>
-            <MapView style={styles.map} initialRegion={currentRegion}>
-                <Marker coordinate={{ latitude: -25.3630901, longitude: -49.2197033 }}>
-                    <Image style={styles.avatar} source={{ uri: 'https://avatars3.githubusercontent.com/u/26572451?s=460&v=4' }}/>
-                    <Callout onPress={ () => {
-                        // navegação
-                        navigation.navigate('Profile', { github_username: 'julianosilva23' })
-                    }}>
-                        <View style={styles.callout}>
-                            <Text style={styles.devName}>Juliano Silva</Text>
-                            <Text style={styles.devBio}>Lorem ipsum dolor sit amet consectetur adipisicing elit. Veritatis quibusdam officiis tempore architecto maiores</Text>
-                            <Text style={styles.devTechs}></Text>
-                        </View>
-                    </Callout>
-                </Marker>
+            <MapView 
+                onRegionChangeComplete={handleRegionChanged} 
+                style={styles.map} 
+                initialRegion={currentRegion}
+            >
+                {devs.map(dev => (
+                    <Marker
+                        key={dev._id}
+                        coordinate={{ 
+                            latitude: dev.location.coordinates[1], 
+                            longitude: dev.location.coordinates[0]
+                        }}
+                    >
+                        <Image style={styles.avatar} source={{ uri: dev.avatar_url }}/>
+                        <Callout onPress={ () => {
+                            // navegação
+                            navigation.navigate('Profile', { github_username: dev.github_username })
+                        }}>
+                            <View style={styles.callout}>
+                                <Text style={styles.devName}>{ dev.name }</Text>
+                                <Text style={styles.devBio}>{ dev.bio }</Text>
+                                <Text style={styles.devTechs}>{ dev.techs.join(', ') }</Text>
+                            </View>
+                        </Callout>
+                    </Marker>
+                ))}
             </MapView>
-            <View style={styles.seachForm}>
+            <View style={styles.searchForm}>
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Buscar devs por techs.."
                     placeholderTextColor="#999"
                     autoCapitalize="words"
                     autoCorrect={false}
+                    value={techs}
+                    onChangeText={setTechs}
                 ></TextInput>
-                <TouchableOpacity onPress={() => {}} style={styles.loadButton}>
+                <TouchableOpacity onPress={loadDevs} style={styles.loadButton}>
                     <MaterialIcons name="my-location" size={20} color="#FFF"/>
                     
                 </TouchableOpacity>
@@ -84,6 +122,9 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         borderColor: '#fff'
     },
+    callout: {
+        width: 260,
+    },
     devName: {
         fontWeight: 'bold',
         fontSize: 16,
@@ -97,13 +138,13 @@ const styles = StyleSheet.create({
     },
     searchForm: {
         position: 'absolute',
-        bottom: 20,
+        top: 20,
         left: 20,
         right: 20,
         zIndex: 5,
         flexDirection: 'row'
     },
-    searchForm: {
+    searchInput: {
         flex: 1,
         height: 50,
         backgroundColor: '#FFF',
